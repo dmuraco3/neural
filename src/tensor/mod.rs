@@ -4,6 +4,7 @@ impl<T> TensorTrait<T> for T where T: Debug {}
 
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct Tensor<T: TensorTrait<T>> {
     pub data: Vec<T>,
     pub left_parent: Option<Box<Tensor<T>>>,
@@ -17,7 +18,7 @@ pub struct Tensor<T: TensorTrait<T>> {
 
 #[allow(dead_code)]
 impl<T: TensorTrait<T>> Tensor<T>  {
-    pub fn new(data: Vec<T>, shape: (usize, usize), ndim: usize, left_parent: Option<Box<Tensor<T>>>, right_parent: Option<Box<Tensor<T>>>) -> Self {
+    pub fn new(data: Vec<T>, shape: (usize, usize, usize), ndim: usize, left_parent: Option<Box<Tensor<T>>>, right_parent: Option<Box<Tensor<T>>>) -> Self {
         Tensor {
             data,
             left_parent,
@@ -31,6 +32,8 @@ impl<T: TensorTrait<T>> Tensor<T>  {
 
 
 }
+
+
 
 
 impl<T: TensorTrait<T>> Display for Tensor<T> {
@@ -71,7 +74,5 @@ macro_rules! tensor {
         }
 
     }};
-    ($($x: expr)) => {{
-        {}
-    }}
+    
 }
