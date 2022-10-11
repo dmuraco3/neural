@@ -1,21 +1,14 @@
 pub mod tensor;
 
+
+
 fn main() {
-    let t = tensor![
-        [
-            [0,0,0],
-            [0,0,0],
-            [0,0,0]
-        ],
-        [
-            [0,0,0],
-            [0,0,0],
-            [0,0,0]
-        ],
-        
+
+    let data = vec![
+        0,0,0
     ];
 
-    let scalar = tensor![0];
+    let t = new_from_matrix!(i32, data);
+    println!("{:?}", t);
 
-    println!("{:?}", scalar.shape);
 }

@@ -1,78 +1,243 @@
-use std::fmt::{Display, Debug, Formatter, Result};
-pub trait TensorTrait<T>: Debug {}
-impl<T> TensorTrait<T> for T where T: Debug {}
+use std::{fmt::{Debug}};
+
+pub mod utils;
+
+pub trait TensorTrait<T>: Debug + 'static {}
+
+impl <T> TensorTrait<T> for i32 {}
+
+impl <T> TensorTrait<T> for f32 {}
+
+impl <T> TensorTrait<T> for f64 {}
+
 
 
 #[allow(dead_code)]
-#[derive(Debug)]
 pub struct Tensor<T: TensorTrait<T>> {
-    pub data: Vec<T>,
-    pub left_parent: Option<Box<Tensor<T>>>,
-    pub right_parent: Option<Box<Tensor<T>>>,
-    pub shape: (usize, usize, usize),
-    pub ndim: usize,
+    inner: Box<[T]>,
 
+    shape: Box<[usize]>,
 
+    grad: Option<f32>,
+
+    bias: Option<f32>,
+
+    weights: Option<&'static [f32]>
 }
-
-
 #[allow(dead_code)]
-impl<T: TensorTrait<T>> Tensor<T>  {
-    pub fn new(data: Vec<T>, shape: (usize, usize, usize), ndim: usize, left_parent: Option<Box<Tensor<T>>>, right_parent: Option<Box<Tensor<T>>>) -> Self {
-        Tensor {
-            data,
-            left_parent,
-            right_parent,
-            shape,
-            ndim,
+impl <T: TensorTrait<T>> Tensor<T> {
+    pub fn new(data: Box<[T]>, dims: Box<[usize]>) -> Self {
+        Self {
+            inner: data,
+            shape: dims,
+            grad: None,
+            bias: None,
+            weights: None
         }
     }
 
-    // either figure this out or have programmer add shape in struct construction 
-
-
 }
 
 
 
-
-impl<T: TensorTrait<T>> Display for Tensor<T> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{:?}", self.data)
-    }
-}
-
-// impl<T: TensorTrait<T>> Add for Tensor<T> {
-//     type Output = Self;
-//     fn add(Self, other: Self) -> Self {
-        
-//     }
-// }
-
+// create tensor up to 10 dimensions
 // from https://docs.rs/ndarray/latest/ndarray/macro.array.html
+
 #[macro_export]
 macro_rules! tensor {
-    ($([$([$($x:expr),* $(,)*]),+ $(,)*]),+ $(,)*) => {{
+    (
+        //10
+        $([$([$([$([$([$([$([$([$([$($x:expr),* $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]) , + $(,)*
+
+    ) => {{
         {
-            let t = vec![$([$([$($x,)*],)*],)*];
-            let shape = (t.len() , t[0].len(), 3);
-            crate::tensor::Tensor::new(t, shape, 3, None, None)
+            let t = vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$($x,)*],)*],)*],)*],)*],)*],)*],)*],)*],)*];
+
+            let dims = [
+                t[0][0][0][0][0][0][0][0][0].len(),
+                t[0][0][0][0][0][0][0][0].len(),
+                t[0][0][0][0][0][0][0].len(),
+                t[0][0][0][0][0][0].len(),
+                t[0][0][0][0][0].len(),
+                t[0][0][0][0].len(),
+                t[0][0][0].len(),
+                t[0][0].len(),
+                t[0].len(),
+                10
+            ]
+
         }
     }};
-    ($([$($x:expr),* $(,)*]),+ $(,)*) => {{
+    (
+        //9
+        $([$([$([$([$([$([$([$([$($x:expr),* $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]) , + $(,)*
+
+    ) => {{
+        {
+            let t = vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$($x,)*],)*],)*],)*],)*],)*],)*],)*],)*];
+            
+            let dims = [
+                t[0][0][0][0][0][0][0][0].len(),
+                t[0][0][0][0][0][0][0].len(),
+                t[0][0][0][0][0][0].len(),
+                t[0][0][0][0][0].len(),
+                t[0][0][0][0].len(),
+                t[0][0][0].len(),
+                t[0][0].len(),
+                t[0].len(),
+                9
+            ]
+
+        }
+    }};
+    (
+        //8
+        $([$([$([$([$([$([$([$($x:expr),* $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]) , + $(,)*
+    ) => {{
+        {
+            let t = vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$($x,)*],)*],)*],)*],)*],)*],)*],)*];
+
+            let dims = [
+                t[0][0][0][0][0][0][0].len(),
+                t[0][0][0][0][0][0].len(),
+                t[0][0][0][0][0].len(),
+                t[0][0][0][0].len(),
+                t[0][0][0].len(),
+                t[0][0].len(),
+                t[0].len(),
+                8
+            ]
+        }
+    }};
+    (
+        //7
+        $([$([$([$([$([$([$($x:expr),* $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]) , + $(,)*
+    ) => {{
+        {
+            let t = vec![$(vec![$(vec![$(vec![$(vec![$(vec![$(vec![$($x,)*],)*],)*],)*],)*],)*],)*];
+
+            let dims = [
+                t[0][0][0][0][0][0].len(),
+                t[0][0][0][0][0].len(),
+                t[0][0][0][0].len(),
+                t[0][0][0].len(),
+                t[0][0].len(),
+                t[0].len(),
+                7
+            ]
+
+        }
+    }};
+    (
+        //6
+        $([$([$([$([$([$($x:expr),* $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]) , + $(,)*
+    ) => {{
+        {
+            let t = vec![$(vec![$(vec![$(vec![$(vec![$(vec![$($x,)*],)*],)*],)*],)*],)*];
+            let dims = [
+                t[0][0][0][0][0].len(),
+                t[0][0][0][0].len(),
+                t[0][0][0].len(),
+                t[0][0].len(),
+                t[0].len(),
+                6
+            ]
+        }
+    }};
+    (
+        //5
+        $([$([$([$([$($x:expr),* $(,)*]), + $(,)*]), + $(,)*]), + $(,)*]) , + $(,)*
+    ) => {{
+        {
+            let t = vec![$(vec![$(vec![$(vec![$(vec![$($x,)*],)*],)*],)*],)*];
+            let dims = [
+                t[0][0][0][0].len(),
+                t[0][0][0].len(),
+                t[0][0].len(),
+                t[0].len(),
+                5
+            ]
+        }
+    }};
+    (
+        //4
+        $([$([$([$($x:expr),* $(,)*]), + $(,)*]), + $(,)*]), + $(,)*
+    ) => {{
+        {
+            let t = vec![$(vec![$(vec![$(vec![$($x,)*],)*],)*],)*];
+            let dims = [
+                t[0][0][0].len(),
+                t[0][0].len(),
+                t[0].len(),
+                4
+            ]
+        }
+    }};
+    (
+        //3
+        $d_type: ty,
+        [$([$([$($x:expr),* $(,)*]), + $(,)*]), + $(,)*]
+    ) => {{
+        {
+            let t = [$([$([$($x,)*],)*],)*];
+
+            let dims = [
+                t[0][0].len(),
+                t[0].len(),
+                3
+            ];
+
+            let dim_prod = dims.iter().fold(1, |sum, val| sum * val);
+
+
+            let p = t.iter().flat_map(|x| x.iter()).flat_map(|x| x.iter()).cloned().collect::<Vec<$d_type>>();
+
+
+
+            "bruh"
+
+        }
+    }};
+    (
+        //2
+        $dtype: ty,
+        [$([$($x:expr),* $(,)*]),+ $(,)*]
+    ) => {{
         {
             let t = vec![$([$($x,)*],)*];
-            let shape = (t.len() , t[0].len(), 2);
-            crate::tensor::Tensor::new(t, shape, 2, None, None)
+
+            let dims = [
+                t[0].len(),
+                2
+            ];
+            
+            let dim_prod = dims.iter().fold(1, |sum, val| sum * val);
+
+
+
         }
     }};
-    ($($x:expr),* $(,)*) => {{
+    (
+        //1
+        $dtype: ty,
+        [$($x:expr),* $(,)*]
+    ) => {{
         {
             let t = vec![$($x,)*];
-            let shape = (t.len(), 0, 0);
-            crate::tensor::Tensor::new(t, shape, 1, None, None)
+            let dims = [t.len()];
         }
 
     }};
     
 }
+#[macro_export]
+macro_rules! new_from_matrix {
+    ($dtype: ty, $y: expr) => {{
+
+        use $crate::tensor::utils::RecursivelyFlattenIterator;
+        $y.into_iter().recursively_flatten::<_, i32>().collect::<Vec<$dtype>>()
+    }};
+}
+
+// code from https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=4d4c86f7f5d2c77ac73ca1de5dde8c4b from author https://users.rust-lang.org/u/steffahn
+
