@@ -187,9 +187,16 @@ macro_rules! tensor {
 }
 #[macro_export]
 macro_rules! new_from_matrix {
-    ($dtype: ty, $y: expr) => {{
+    ($dtype: ty, $data: expr, $shape: expr) => {{
 
         use $crate::tensor::utils::RecursivelyFlattenIterator;
-        $y.into_iter().recursively_flatten::<_, i32>().collect::<Vec<$dtype>>()
+        
+        use $crate::tensor::Tensor;
+
+
+        Tensor::new(
+            $data.into_iter().recursively_flatten::<_, $dtype>().collect::<Vec<$dtype>>().into_boxed_slice(),
+            Box::new($shape)
+        )
     }};
 }
