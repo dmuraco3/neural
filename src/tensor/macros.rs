@@ -194,9 +194,19 @@ macro_rules! new_from_matrix {
         use $crate::tensor::Tensor;
 
 
-        Tensor::new(
-            $data.into_iter().recursively_flatten::<_, $dtype>().collect::<Vec<$dtype>>().into_boxed_slice(),
-            Box::new($shape)
-        )
+        // simple shape check
+    
+        let _t = $data.into_iter().recursively_flatten::<_, $dtype>().collect::<Vec<$dtype>>();
+
+        if $shape.iter().fold(1, |acc, x| acc * x) == _t.len() {
+            Tensor::new(
+                _t,
+                Vec::from($shape)
+            )
+        } else {
+            panic!("Shape doesn't match array")
+        }
+
+        
     }};
 }

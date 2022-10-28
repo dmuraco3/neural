@@ -1,4 +1,4 @@
-use std::{fmt::{Debug}, ops::{Mul, Add}};
+use std::{fmt::{Debug}, ops::{Mul, Add}, iter::Sum};
 
 pub mod utils;
 
@@ -15,16 +15,21 @@ impl <T> TensorTrait<T> for f64 {}
 
 
 #[allow(dead_code)]
-pub struct Tensor<T: TensorTrait<T>> {
-    pub inner  : Box<[T]>,
+#[derive(Clone)]
+pub struct Tensor<T: TensorTrait<T>>
+where
+    T : Copy
+{
+    inner      : Vec<T>,
 
-    shape  : Box<[usize]>,
+    shape      : Vec<usize>,
 
     // strides: Box<[usize]>,
 }
+
 #[allow(dead_code)]
 impl <T: TensorTrait<T>> Tensor<T> {
-    pub fn new(data: Box<[T]>, dims: Box<[usize]>) -> Self {
+    pub fn new(data: Vec<T>, dims: Vec<usize>) -> Self {
 
 
         // calculating and storing strides to save computation time at indexing
@@ -44,7 +49,7 @@ impl <T: TensorTrait<T>> Tensor<T> {
 
 
     // indexing in this library works like array accesses so that [x,y,z,...] are reversed [...,z,y,x]
-    fn index(self, coordinates: &[usize])  -> T {
+    fn index(self, coordinates: Vec<usize>)  -> T {
         if coordinates.len() == self.shape.len() {
             let mut sum = 0;
 
@@ -65,17 +70,6 @@ impl <T: TensorTrait<T>> Tensor<T> {
 
 }
 
-// impl <T: TensorTrait<T>> Mul for Tensor<T> {
-//     type Output = Self;
-//     fn mul(self, rhs: Self) -> Self {
-//         if self.shape[0] == rhs.shape[rhs.shape.len()-1] {
-
-//         } else {
-//             // todo: better error message here
-//             panic!("These matrices cannot be multiplied")
-//         }
-//     }
-// }
 
 impl <T:TensorTrait<T>> Mul<T> for Tensor<T> 
 where
@@ -93,47 +87,157 @@ where
         };
         
         Self {
-            inner: temp.into_boxed_slice(),
+            inner: temp,
             shape: self.shape,
             // strides: self.strides,
         }
     }
 }
 
-//(Box<[T]>, Box<[usize]>)
-pub fn matmul<T>(x1: Box<[T]>, x1_shape: Box<[usize]>, x2: Box<[T]>, x2_shape: Box<[usize]>) -> () {
-
-    if x1_shape == x2_shape {
-        if x1_shape.len() > 2 && x2_shape.len() > 2 {
-            let x1_shape_max = x1_shape.iter().fold(1, |acc, x| acc * x);
-            let x2_shape_max = x2_shape.iter().fold(1, |acc, x| acc * x);
-    
-            let x1_layers = (0..x1.len()-1).step_by(x1.len()/x1_shape[0]).map()
-    
-        } else {
-            return 
+// returns vector all the time so we can get slices from this 
+pub fn index<T>(x: Vec<T>, x_shape: Vec<usize>, indices: Vec<usize>) -> (Vec<T>, Vec<usize>)
+where
+    T: Copy
+{
+    if indices.len() == x_shape.len() {
+        let mut sum = 0;
+        for x in 0..x_shape.len()-1 {
+            let y = x_shape[x+1..].iter().fold(1, |acc, x| acc * x);
+            sum += y * indices[x]
         }
+        sum += indices[indices.len()-1];
+        return (
+            Vec::from([x[sum]]),
+            Vec::new()
+        )
+    } 
+    else if indices.len() < x_shape.len() {
+        
+        //  a = ( indices * indices.len()..1 )
+        //  b = ( inner_prod( shape[indices.len()..] ) )
+        //
+        //  returns a[ a * b ..  a * b + b]
 
-    } else {
-        panic!("matrices are not the same shape");
+        let indice_calc = indices.iter().zip((1..=indices.len()).rev()).map(|(indice, reverse_index)| indice * reverse_index).fold(0,|acc,x| acc+ x);
+        let shape_calc = x_shape[indices.len()..].iter().fold(1, |acc, x| acc * x);
+        let t = x[
+            indice_calc * shape_calc
+            ..
+            indice_calc * shape_calc + shape_calc
+        ].to_vec();
+        
+        return (
+            t,
+            x_shape[indices.len()-1..].to_vec(),
+        )
     }
+    else {
+        panic!("indices longer than shape")
+    }
+}
+
+// dot product
+pub fn dotprod<T>(x1: Vec<T>, x1_shape: Vec<usize>, x2: Vec<T>, x2_shape: Vec<usize>) -> (Vec<T>, Vec<usize>)
+where
+    T: Mul<Output = T> + Copy + Sum + Debug
+{
+    if x1_shape.len() == 0 && x2_shape.len() == 0 {
+        return (Vec::from([x1[0] * x2[0]]), Vec::new())
+    }
+    else if x1_shape.len() == 1 && x2_shape.len() == 1 {
+        return (
+            Vec::from([x1.iter().cloned().zip(x2.iter().cloned()).map(|(x1,x2)| x1 * x2).sum()]),
+            Vec::new()
+        )
+    }
+    else if x1_shape.len() == 2 && x2_shape.len() == 2 {
+        return matmul(x1, x1_shape, x2, x2_shape)
+    }
+    else {
+        panic!("can't perform this operation")
+    }
+
+}
+
+//(Box<[T]>, Box<[usize]>)
+pub fn matmul<T>(x1: Vec<T>, x1_shape: Vec<usize>, x2: Vec<T>, x2_shape: Vec<usize>) -> (Vec<T>, Vec<usize>)
+where
+    T: Mul<Output = T> + Copy + Sum + Debug,
+{
+    let shape_size = (x1_shape.len(), x2_shape.len());
+    if shape_size == (0,0) {
+        return (
+            Vec::from([x1[0] * x2[0]]),
+            Vec::new()
+        )
+    }
+    // 1d matrices can't be matrix multiplied
+    else if shape_size == (2,2) {
+        if x1_shape[1] == x2_shape[0] {
+            
+            let mut cols: Vec<Vec<T>> = Vec::new();
+
+
+            // O(x2_shape[1]^2)
+            // gets cols here so using less operations in row iteration
+            for col_index in 0..x2_shape[1] {
+                let mut col: Vec<T> = Vec::new();
+                for row_index in (0..x2.len()-1).step_by(x2_shape[1]) {
+                    col.push(x2[col_index + row_index])
+                }
+                cols.push(col)
+            }
+
+
+            let mut new_matrix: Vec<T> = Vec::new();
+
+            for (index, row_index) in (0..x1.len()-1).step_by(x1_shape[1]).enumerate() {
+                let row = x1[row_index..row_index + x1_shape[1]].to_vec();
+                let mut new_row: Vec<T> = Vec::new();
+                for col in cols.iter().cloned() {
+                    let temp = dotprod(row.to_owned(), Vec::from([x1_shape[1]]), col, Vec::from([x2_shape[0]])).0[0];
+                    new_matrix.push(temp)
+                }
+            }
+
+
+            return (
+                new_matrix,
+                Vec::from([x1_shape[0], x2_shape[1]])
+            )
+        } else {
+            panic!("row size does not match column size");
+        }
+    }
+    else if shape_size > (2,2) {
+
+        println!("{:?}", index(x1, x1_shape, Vec::from([0,1,0])));
+
+        return (
+            Vec::new(),
+            Vec::new()
+        )
+    }
+    else {
+        panic!("These matrices can't be multiplied")
+    }
+    
 }
 
 
 impl <T: TensorTrait<T>> Mul<Tensor<T>> for Tensor<T> 
 where
-    T: Mul<Output = T>
+    T: Mul<Output = T> + Sum
 {
     type Output = Self;
     fn mul(self, rhs: Tensor<T>) -> Tensor<T> {
 
         let t = matmul(self.inner, self.shape, rhs.inner, rhs.shape);
 
-        // Self {
-        //     inner: t.0,
-        //     shape: t.1
-        // }
-        self
+        Self {
+            inner: t.0,
+            shape: t.1
+        }
         
 
     }
@@ -162,7 +266,7 @@ where T: Add<Output = T>
             }
 
             Self {
-                inner   : t.into_boxed_slice(),
+                inner   : t,
                 shape   : self.shape,
                 // strides : self.strides,
             }
