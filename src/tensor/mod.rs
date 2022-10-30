@@ -1,4 +1,4 @@
-use std::{fmt::{Debug}, ops::{Mul, Add}, iter::Sum};
+use std::{fmt::{Debug}, ops::{Mul, Add}, iter::Sum, borrow::Borrow};
 
 pub mod utils;
 
@@ -15,7 +15,7 @@ impl <T> TensorTrait<T> for f64 {}
 
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Tensor<T: TensorTrait<T>>
 where
     T : Copy
@@ -95,7 +95,7 @@ where
 }
 
 // returns vector all the time so we can get slices from this 
-pub fn index<T>(x: Vec<T>, x_shape: Vec<usize>, indices: Vec<usize>) -> (Vec<T>, Vec<usize>)
+pub fn index<T>(x: Vec<T>, x_shape: Vec<usize>, indices: Vec<usize>) -> Result<(Vec<T>, Vec<usize>), String>
 where
     T: Copy
 {
@@ -106,10 +106,10 @@ where
             sum += y * indices[x]
         }
         sum += indices[indices.len()-1];
-        return (
+        return Ok((
             Vec::from([x[sum]]),
             Vec::new()
-        )
+        ))
     } 
     else if indices.len() < x_shape.len() {
         
@@ -126,20 +126,20 @@ where
             indice_calc * shape_calc + shape_calc
         ].to_vec();
         
-        return (
+        return Ok((
             t,
-            x_shape[indices.len()-1..].to_vec(),
-        )
+            x_shape[indices.len()..].to_vec(),
+        ))
     }
     else {
-        panic!("indices longer than shape")
+        return Err("indices longer than shape".into());
     }
 }
 
 // dot product
 pub fn dotprod<T>(x1: Vec<T>, x1_shape: Vec<usize>, x2: Vec<T>, x2_shape: Vec<usize>) -> (Vec<T>, Vec<usize>)
 where
-    T: Mul<Output = T> + Copy + Sum + Debug
+    T: Mul<Output = T> + Copy + Sum
 {
     if x1_shape.len() == 0 && x2_shape.len() == 0 {
         return (Vec::from([x1[0] * x2[0]]), Vec::new())
@@ -162,7 +162,7 @@ where
 //(Box<[T]>, Box<[usize]>)
 pub fn matmul<T>(x1: Vec<T>, x1_shape: Vec<usize>, x2: Vec<T>, x2_shape: Vec<usize>) -> (Vec<T>, Vec<usize>)
 where
-    T: Mul<Output = T> + Copy + Sum + Debug,
+    T: Mul<Output = T> + Copy + Sum
 {
     let shape_size = (x1_shape.len(), x2_shape.len());
     if shape_size == (0,0) {
@@ -191,9 +191,8 @@ where
 
             let mut new_matrix: Vec<T> = Vec::new();
 
-            for (index, row_index) in (0..x1.len()-1).step_by(x1_shape[1]).enumerate() {
+            for row_index in (0..x1.len()-1).step_by(x1_shape[1]) {
                 let row = x1[row_index..row_index + x1_shape[1]].to_vec();
-                let mut new_row: Vec<T> = Vec::new();
                 for col in cols.iter().cloned() {
                     let temp = dotprod(row.to_owned(), Vec::from([x1_shape[1]]), col, Vec::from([x2_shape[0]])).0[0];
                     new_matrix.push(temp)
@@ -211,11 +210,22 @@ where
     }
     else if shape_size > (2,2) {
 
-        println!("{:?}", index(x1, x1_shape, Vec::from([0,1,0])));
+        let result = (0..x1_shape[0]).map(|x| {
+            let x1_sub = index(x1.clone(), x1_shape.clone(), Vec::from([x])).unwrap();
+            let x2_sub = index(x2.clone(), x2_shape.clone(), Vec::from([x])).unwrap();
+            let result = dotprod(x1_sub.0, x1_sub.1, x2_sub.0, x2_sub.1);
+            return result.0
+        }).clone().flatten().collect::<Vec<T>>();
+
+        // let shape = [x1_shape[0..x1_shape.len()-2].borrow().concat(), x2_shape[x2_shape.len()-1]]
+
+        let mut shape = x1_shape[0..x1_shape.len()-1].to_vec();
+
+        shape.extend([x2_shape[x2_shape.len()-1]].iter());
 
         return (
-            Vec::new(),
-            Vec::new()
+            result,
+            shape,
         )
     }
     else {

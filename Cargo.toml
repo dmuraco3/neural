@@ -1,9 +1,15 @@
 [package]
 name = "neural"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
+authors = ["Dylan Muraco <dylanjmuraco@gmail.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "rustgrad"
+path = "src/lib.rs"
+
 [dependencies]
 smallvec = "1.10.0"
+
