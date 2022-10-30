@@ -1,4 +1,4 @@
-mod tensor;
+pub mod tensor;
 
 #[allow(dead_code)]
 const TEST_RUNS : u32 = 10000;

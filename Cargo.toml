@@ -10,6 +10,10 @@ authors = ["Dylan Muraco <dylanjmuraco@gmail.com>"]
 name = "rustgrad"
 path = "src/lib.rs"
 
+[profile.release]
+lto = "fat"
+codegen-units = 1
+
 [dependencies]
 smallvec = "1.10.0"
 

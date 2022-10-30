@@ -1,8 +1,6 @@
 use std::time::Instant;
 
-pub mod tensor;
-
-
+use rustgrad::new_from_matrix;
 
 fn main() {
     let x1 = vec![
@@ -45,8 +43,14 @@ fn main() {
         let x1_tensor = new_from_matrix!(i32, x1, [3,3,3]);
         let x2_tensor = new_from_matrix!(i32, x2, [3,3,2]);
 
-        let result = x1_tensor * x2_tensor;
+        let start = Instant::now();
 
-        println!("{:?}", result);
+        for _ in 0..10000 {
+            let _ = x1_tensor.clone() * x2_tensor.clone();
+        }
+
+        let duration = start.elapsed();
+
+        println!("took {:#?}, average of {:#?} over {} runs", duration, duration /10000, 10000);
 
 }
