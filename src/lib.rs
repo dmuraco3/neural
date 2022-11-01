@@ -1,13 +1,14 @@
 pub mod tensor;
+pub mod nn;
 
 #[allow(dead_code)]
-const TEST_RUNS : u32 = 10000;
+const TEST_RUNS : usize = 1000000;
 
 #[cfg(test)]
 mod tests {
-    use std::time::Instant;
+    use std::time::{Instant, Duration};
 
-    use crate::{new_from_matrix, TEST_RUNS};
+    use crate::{new_from_matrix, TEST_RUNS, tensor::Tensor};
 
     #[test]
     fn test_2d_multiplication() {
@@ -42,7 +43,7 @@ mod tests {
         }
         let duration  = start.elapsed();
 
-        println!("total time: {:#?}, average: {:#?} (2 * 3 matrix multiplication, {} iterations) ", duration, duration / TEST_RUNS, TEST_RUNS);
+        println!("total time: {:#?}, average: {:#?} (2 * 3 matrix multiplication, {} iterations) ", duration, duration / TEST_RUNS as u32, TEST_RUNS);
 
         assert_eq!(result, correct_result);
     }
@@ -71,17 +72,17 @@ mod tests {
             vec![
                 vec![0,1],
                 vec![2,3],
-                vec![3,4],
+                vec![4,5],
             ],
             vec![
-                vec![5,6],
-                vec![7,8],
-                vec![9,10]
+                vec![6,7],
+                vec![8,9],
+                vec![10,11]
             ],
             vec![
-                vec![11,12],
-                vec![13,14],
-                vec![15,16]
+                vec![12,13],
+                vec![14,15],
+                vec![16,17]
             ]
 
         ];
@@ -89,8 +90,33 @@ mod tests {
         let x1_tensor = new_from_matrix!(i32, x1, [3,3,3]);
         let x2_tensor = new_from_matrix!(i32, x2, [3,3,2]);
 
-        let result = x1_tensor * x2_tensor;
+        let result = x1_tensor.clone() * x2_tensor.clone();
 
+        let correct_result = Tensor::new([10, 13, 28, 40, 46, 67, 244, 274, 316, 355, 388, 436, 802, 859, 928, 994, 1054, 1129].to_vec(), [3,3,2].to_vec());
+
+        // benchmark test here because benchmarks are only in nightly smh
+        {
+
+            let mut times = Vec::with_capacity(TEST_RUNS);
+    
+            for _ in 0..TEST_RUNS {
+                let start = Instant::now();
+    
+                let _ = x1_tensor.clone() * x2_tensor.clone();
+    
+                times.push(start.elapsed());
+            }
+    
+            let mean : u32 = times.iter().sum::<Duration>().subsec_nanos() / TEST_RUNS as u32;
+    
+            let std_dev : u32 = times.iter().map(|x| (x.subsec_nanos() - mean).pow(2)).sum::<u32>() / TEST_RUNS as u32;
+    
+            println!("{:#?} ± {:#?} per loop", Duration::from_nanos(mean as u64), Duration::from_nanos(std_dev as u64) );
+
+        }
+
+
+        assert_eq!(result, correct_result);
 
     }
 }

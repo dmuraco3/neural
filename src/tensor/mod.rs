@@ -1,10 +1,12 @@
 use std::{fmt::{Debug}, ops::{Mul, Add}, iter::Sum};
 
+use num::Zero;
+
 pub mod utils;
 
 pub mod macros;
 
-pub trait TensorTrait<T>: Debug +  Copy +'static {}
+pub trait TensorTrait<T>: Debug +  Copy + Zero  + 'static {}
 
 impl <T> TensorTrait<T> for i32 {}
 
@@ -20,9 +22,9 @@ pub struct Tensor<T: TensorTrait<T>>
 where
     T : Copy
 {
-    inner      : Vec<T>,
+    pub inner      : Vec<T>,
 
-    shape      : Vec<usize>,
+    pub shape      : Vec<usize>,
 
     // strides: Box<[usize]>,
 }
@@ -30,21 +32,14 @@ where
 #[allow(dead_code)]
 impl <T: TensorTrait<T>> Tensor<T> {
     pub fn new(data: Vec<T>, dims: Vec<usize>) -> Self {
-
-
-        // calculating and storing strides to save computation time at indexing
-        let mut strides: Vec<usize> = Vec::new();
-
-        for dim in 0..dims.len()-1 {
-            let y = dims[dim+1..].iter().fold(1, |acc, x| acc * x);
-            strides.push(y);
-        }
-
         Self {
             inner  : data,
             shape  : dims,
-            // strides: strides.into_boxed_slice(),
         }
+    }
+
+    pub fn len(self) -> usize {
+        return self.inner.len()
     }
 
 
@@ -77,7 +72,7 @@ where
 {
     type Output = Self;
     fn mul(self, rhs: T) -> Self {
-        let mut temp: Vec<T> = Vec::new();
+        let mut temp: Vec<T> = Vec::with_capacity(self.inner.len());
 
         for x in 0..self.inner.len()-1 {
             let a = self.inner[x] * rhs;
@@ -175,13 +170,13 @@ where
     else if shape_size == (2,2) {
         if x1_shape[1] == x2_shape[0] {
             
-            let mut cols: Vec<Vec<T>> = Vec::new();
+            let mut cols: Vec<Vec<T>> = Vec::with_capacity(x2_shape[0]);
 
 
             // O(x2_shape[1]^2)
             // gets cols here so using less operations in row iteration
             for col_index in 0..x2_shape[1] {
-                let mut col: Vec<T> = Vec::new();
+                let mut col: Vec<T> = Vec::with_capacity(x2_shape[0]);
                 for row_index in (0..x2.len()-1).step_by(x2_shape[1]) {
                     col.push(x2[col_index + row_index])
                 }
@@ -189,8 +184,7 @@ where
             }
 
 
-            let mut new_matrix: Vec<T> = Vec::new();
-
+            let mut new_matrix: Vec<T> = Vec::with_capacity(x1_shape[0] * x2_shape[1]);
             for row_index in (0..x1.len()-1).step_by(x1_shape[1]) {
                 let row = x1[row_index..row_index + x1_shape[1]].to_vec();
                 for col in cols.iter().cloned() {
@@ -198,7 +192,6 @@ where
                     new_matrix.push(temp)
                 }
             }
-
 
             return (
                 new_matrix,
@@ -214,7 +207,7 @@ where
             let x1_sub = index(x1.clone(), x1_shape.clone(), Vec::from([x])).unwrap();
             let x2_sub = index(x2.clone(), x2_shape.clone(), Vec::from([x])).unwrap();
             let result = dotprod(x1_sub.0, x1_sub.1, x2_sub.0, x2_sub.1);
-            return result.0
+            result.0
         }).clone().flatten().collect::<Vec<T>>();
 
         // let shape = [x1_shape[0..x1_shape.len()-2].borrow().concat(), x2_shape[x2_shape.len()-1]]

@@ -193,7 +193,6 @@ macro_rules! new_from_matrix {
         
         use $crate::tensor::Tensor;
 
-
         // simple shape check
     
         let _t = $data.into_iter().recursively_flatten::<_, $dtype>().collect::<Vec<$dtype>>();
