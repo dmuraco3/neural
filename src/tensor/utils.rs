@@ -1,6 +1,8 @@
 
 // code from https://gist.github.com/Notgnoshi/b803e4c1eef7f1ba8ed453c8117349e8
 
+use std::alloc::{Layout, alloc, alloc_zeroed};
+
 pub trait RecursivelyFlattenIterator: Iterator + Sized {
     fn recursively_flatten<Depth, Item>(self) -> RecursivelyFlatten<Depth, Self, Item>
     where
@@ -62,4 +64,17 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next()
     }
+}
+
+
+// https://www.reddit.com/r/rust/comments/jzwwqb/about_creating_a_boxed_slice/
+#[inline(never)]
+pub fn alloc_box_buffer<T>(len: usize) -> Box<[T]> {
+    if len == 0 {
+        return <Box<[T]>>::default();
+    } 
+    let layout = Layout::array::<T>(len).unwrap();
+    let ptr= unsafe {alloc_zeroed(layout)};
+    let slice_ptr = core::ptr::slice_from_raw_parts_mut(ptr as *mut T, len);
+    unsafe {Box::from_raw(slice_ptr)}
 }

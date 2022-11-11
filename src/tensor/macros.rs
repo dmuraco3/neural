@@ -195,12 +195,13 @@ macro_rules! new_from_matrix {
 
         // simple shape check
     
-        let _t = $data.into_iter().recursively_flatten::<_, $dtype>().collect::<Vec<$dtype>>();
+        let data = $data.into_iter().recursively_flatten::<_, $dtype>().collect::<Vec<$dtype>>();
 
-        if $shape.iter().fold(1, |acc, x| acc * x) == _t.len() {
+        let data = data.into_boxed_slice();
+        if $shape.iter().fold(1, |acc, x| acc * x) == data.len() {
             Tensor::new(
-                _t,
-                Vec::from($shape)
+                data,
+                Box::new($shape)
             )
         } else {
             panic!("Shape doesn't match array")
