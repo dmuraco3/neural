@@ -186,7 +186,7 @@ macro_rules! tensor {
     
 }
 #[macro_export]
-macro_rules! new_from_matrix {
+macro_rules! new_tensor {
     ($dtype: ty, $data: expr, $shape: expr) => {{
 
         use $crate::tensor::utils::RecursivelyFlattenIterator;

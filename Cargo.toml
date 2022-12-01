@@ -11,6 +11,10 @@ name = "rustgrad"
 path = "src/lib.rs"
 
 [profile.release]
+opt-level = 3
 
 [dependencies]
+csv = "1.1.6"
+num = "0.4.0"
+rand = "0.8.5"
 
